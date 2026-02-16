@@ -1,41 +1,60 @@
 #!/bin/bash
-# setup_data.sh
-# Automation script to re-download necessary large files in GitHub Codespaces
+# setup_data.sh - Run this FIRST in GitHub Codespaces
+# Downloads all large data files and processes them
 
-echo "🚀 Setting up Transit Equity Dashboard Data..."
+set -e
 
-# Create directories
+echo "=== Transit Equity Dashboard - Data Setup ==="
+
+# Fix devcontainer folder name (Windows hides dot-folders)
+if [ -d "devcontainer_config" ] && [ ! -d ".devcontainer" ]; then
+    mv devcontainer_config .devcontainer
+    echo "[OK] Renamed devcontainer_config to .devcontainer"
+fi
+
+# Install Python dependencies
+echo "[1/5] Installing Python dependencies..."
+pip install -r requirements.txt
+
+# Create directory structure
 mkdir -p data/EDM/raw
 mkdir -p data/EDM/region/statscan_boundaries
 mkdir -p data/EDM/osm
 mkdir -p data/EDM/gtfs
 
-# 1. Download Alberta OSM (Large File ~200MB)
-echo "Downloading Alberta OSM Data..."
+# Download Alberta OSM (~200MB)
+echo "[2/5] Downloading Alberta OSM data..."
 if [ ! -f "data/EDM/osm/edmonton.osm.pbf" ]; then
-    wget -O data/EDM/osm/edmonton.osm.pbf https://download.geofabrik.de/north-america/canada/alberta-latest.osm.pbf
-    echo "✅ OSM Download Complete"
+    wget -q --show-progress -O data/EDM/osm/edmonton.osm.pbf \
+        https://download.geofabrik.de/north-america/canada/alberta-latest.osm.pbf
 else
-    echo "✅ OSM file already exists"
+    echo "  Already exists, skipping."
 fi
 
-# 2. Download Statistics Canada Boundaries (Large File ~200MB)
-echo "Downloading Census Boundaries..."
-if [ ! -f "data/EDM/region/lda_000b21a_e.zip" ]; then
-    wget -O data/EDM/region/lda_000b21a_e.zip https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-le/boundary-limites/files-fichiers/lda_000b21a_e.zip
-    # Unzip specifically the shapefile parts
+# Download Statistics Canada DA Boundaries (~200MB)
+echo "[3/5] Downloading Census boundaries..."
+if [ ! -f "data/EDM/region/statscan_boundaries/lda_000b21a_e.shp" ]; then
+    wget -q --show-progress -O data/EDM/region/lda_000b21a_e.zip \
+        https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-le/boundary-limites/files-fichiers/lda_000b21a_e.zip
     unzip -o data/EDM/region/lda_000b21a_e.zip -d data/EDM/region/statscan_boundaries
-    echo "✅ Boundary Download Complete"
 else
-    echo "✅ Boundary file already exists"
+    echo "  Already exists, skipping."
 fi
 
-# 3. Create Placeholder Demographics (Small Script)
-echo "Generating Placeholder Demographics..."
-python generate_placeholders.py
+# Download ETS GTFS Feed (~50MB)
+echo "[4/5] Downloading Edmonton Transit GTFS..."
+if [ ! -f "data/EDM/gtfs/ETS.zip" ]; then
+    wget -q --show-progress -O data/EDM/gtfs/ETS.zip \
+        https://gtfs.edmonton.ca/TMGTFSRealTimeWebService/GTFS/gtfs.zip
+else
+    echo "  Already exists, skipping."
+fi
 
-# 4. Process Region Files (Heavy Lifting)
-echo "Processing Region Boundaries..."
+# Generate placeholder demographics and process boundaries
+echo "[5/5] Processing region data..."
+python generate_placeholders.py
 python process_region.py
 
-echo "🎉 Data Setup Complete! You are ready to run: python test_pipeline.py"
+echo ""
+echo "=== Setup Complete ==="
+echo "Next: Run 'python test_pipeline.py' to test the pipeline."
