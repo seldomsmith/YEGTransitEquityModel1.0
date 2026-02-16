@@ -1,2 +1,2 @@
-# YEGTransitEquityModel1.0
-If you know, you know. 
+# ted-data
+Data Analysis for the TransitCenter Equity Dashboard
